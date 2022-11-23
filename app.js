@@ -2,6 +2,7 @@ const { Telegraf } = require('telegraf')
 require('dotenv').config()
 const data = require('./data')
 const commands = require('./const')
+const users = require('./pg')
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
@@ -20,10 +21,21 @@ function getDif(date1, date2) {
   let dif = date1.getTime() - date2.getTime()
   return dif
 }
+
 bot.command('info', (ctx) => {
   let info = JSON.stringify(data[0], null, 2)
   bot.telegram.sendMessage(ctx.message.chat.id,
     `${info}`)
+})
+
+bot.command('users', (ctx) => {
+  users.then((e) => {
+    console.log(e.rows)
+    bot.telegram.sendMessage(ctx.message.chat.id,
+      `${e.rows}`)
+  }).catch((e) => {
+    console.log(e.message)
+  })
 })
 
 bot.command('task', (ctx) => {
