@@ -1,7 +1,7 @@
 const { Telegraf } = require('telegraf')
 require('dotenv').config()
 const commands = require('./const')
-const users = require('./pg')
+const { selectPromise, insertRecord } = require('./pg')
 const axios = require('axios');
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
@@ -13,6 +13,17 @@ let recipientId
 bot.start((ctx) => {
   ctx.reply('Добро пожаловать!')
   recipientId = ctx.message.text.split(' ')[1]
+
+  const username = ctx.message.from.username
+  const tgid = ctx.message.from.id
+
+  insertRecord(username, tgid)
+    .then((result) => {
+      console.log('Inserted row:', result.rows[0]);
+    })
+    .catch((error) => {
+      console.error('Insert error:', error);
+    })
 })
 
 bot.command('ntf', (ctx) => {
@@ -46,10 +57,11 @@ bot.hears('кто я', (ctx) => {
 })
 
 bot.command('users', (ctx) => {
-  users.then((e) => {
+  selectPromise.then((e) => {
     console.log(e.rows)
+    const result = JSON.stringify(e.rows, null, 2)
     bot.telegram.sendMessage(ctx.message.chat.id,
-      `${e.rows}`)
+      `${result}`)
   }).catch((e) => {
     console.log(e.message)
   })

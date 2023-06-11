@@ -10,8 +10,15 @@ const client = new Client({
 
 client.connect()
 
-let query = `Select * from "Users"`
+let selectQuery = `SELECT * FROM "Users"`
+const selectPromise = client.query(selectQuery)
 
-const usersPromise = client.query(query)
+const insertRecord = (username, tgid) => {
+    const insertQuery = `INSERT INTO "Users" (username, tgid) VALUES ('${username}', '${tgid}') RETURNING *`
+    return client.query(insertQuery)
+}
 
-module.exports = usersPromise
+module.exports = {
+    selectPromise,
+    insertRecord
+}

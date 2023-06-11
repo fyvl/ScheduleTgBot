@@ -4,9 +4,10 @@
 
 CREATE TABLE IF NOT EXISTS public."Users"
 (
-    id bigint,
+    id serial PRIMARY KEY,
     username character varying COLLATE pg_catalog."default",
-    tgid bigint
+    tgid bigint,
+    schedule_id integer
 )
 
 TABLESPACE pg_default;
