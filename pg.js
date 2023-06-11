@@ -13,9 +13,21 @@ client.connect()
 let selectQuery = `SELECT * FROM "Users"`
 const selectPromise = client.query(selectQuery)
 
-const insertRecord = (username, tgid) => {
-    const insertQuery = `INSERT INTO "Users" (username, tgid) VALUES ('${username}', '${tgid}') RETURNING *`
-    return client.query(insertQuery)
+const insertRecord = (username, tgid, scheduleid) => {
+    const selectQuery = `SELECT * FROM "Users" WHERE username = '${username}'`;
+    const insertQuery = `INSERT INTO "Users" (username, tg_id, schedule_id) VALUES ('${username}', '${tgid}', '${scheduleid}') RETURNING *`
+
+    return client.query(selectQuery)
+        .then((result) => {
+            if (result.rowCount > 0) {
+                return { rowCount: 0, rows: result.rows[0] }
+            } else {
+                return client.query(insertQuery)
+            }
+        })
+        .catch((error) => {
+            throw new Error('Insert error: ' + error.message);
+        });
 }
 
 module.exports = {

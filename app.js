@@ -11,60 +11,60 @@ const status = 'UNREAD'
 let recipientId
 
 bot.start((ctx) => {
-  ctx.reply('Добро пожаловать!')
-  recipientId = ctx.message.text.split(' ')[1]
+    ctx.reply('Добро пожаловать!')
+    recipientId = ctx.message.text.split(' ')[1]
 
-  const username = ctx.message.from.username
-  const tgid = ctx.message.from.id
+    const username = ctx.message.from.username
+    const tgId = ctx.message.from.id
 
-  insertRecord(username, tgid)
-    .then((result) => {
-      console.log('Inserted row:', result.rows[0]);
-    })
-    .catch((error) => {
-      console.error('Insert error:', error);
-    })
+    insertRecord(username, tgId, recipientId)
+        .then((result) => {
+            console.log('Inserted row:', result.rows)
+        })
+        .catch((error) => {
+            console.error('Insert error:', error);
+        })
 })
 
 bot.command('ntf', (ctx) => {
-  axios.get(url, {
-    params: {
-      status: status
-    },
-    headers: {
-      'accept': '*/*',
-      'X-User-Identity': recipientId
-    }
-  })
-    .then(response => {
-      const data = response.data
-      const messages = data.notifications.map(notification => '***' + notification.message + '***').join('\n')
-      ctx.reply('Ваши непрочитанные уведомления: \n' + messages)
+    axios.get(url, {
+        params: {
+            status: status
+        },
+        headers: {
+            'accept': '*/*',
+            'X-User-Identity': recipientId
+        }
     })
-    .catch(error => {
-      console.error(error);
-      ctx.reply('Произошла ошибка, сервис временно недоступен!.')
-    });
+        .then(response => {
+            const data = response.data
+            const messages = data.notifications.map(notification => '***' + notification.message + '***').join('\n')
+            ctx.reply('Ваши непрочитанные уведомления: \n' + messages)
+        })
+        .catch(error => {
+            console.error(error);
+            ctx.reply('Произошла ошибка, сервис временно недоступен!.')
+        });
 });
 
 bot.help((ctx) => ctx.reply(commands))
 
 bot.hears('кто я', (ctx) => {
-  bot.telegram.sendMessage(ctx.message.chat.id,
-    `Привет, ${ctx.message.from.first_name}\n` +
-    `Твой id: ${ctx.message.from.id}\n` +
-    `Телегамм: @${ctx.message.from.username}`)
+    bot.telegram.sendMessage(ctx.message.chat.id,
+        `Привет, ${ctx.message.from.first_name}\n` +
+        `Твой id: ${ctx.message.from.id}\n` +
+        `Телегамм: @${ctx.message.from.username}`)
 })
 
 bot.command('users', (ctx) => {
-  selectPromise.then((e) => {
-    console.log(e.rows)
-    const result = JSON.stringify(e.rows, null, 2)
-    bot.telegram.sendMessage(ctx.message.chat.id,
-      `${result}`)
-  }).catch((e) => {
-    console.log(e.message)
-  })
+    selectPromise.then((e) => {
+        console.log(e.rows)
+        const result = JSON.stringify(e.rows, null, 2)
+        bot.telegram.sendMessage(ctx.message.chat.id,
+            `${result}`)
+    }).catch((e) => {
+        console.log(e.message)
+    })
 })
 
 bot.launch()

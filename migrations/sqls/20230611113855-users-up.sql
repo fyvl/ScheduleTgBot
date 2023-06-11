@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public."Users"
 (
     id serial PRIMARY KEY,
     username character varying COLLATE pg_catalog."default",
-    tgid bigint,
+    tg_id bigint,
     schedule_id integer
 )
 
