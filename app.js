@@ -1,12 +1,40 @@
 const { Telegraf } = require('telegraf')
 require('dotenv').config()
-const data = require('./data')
 const commands = require('./const')
 const users = require('./pg')
+const axios = require('axios');
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
-bot.start((ctx) => ctx.reply('Добро пожаловать!'))
+const url = 'http://localhost:8083/schedule/notification'
+const status = 'UNREAD'
+let recipientId
+
+bot.start((ctx) => {
+  ctx.reply('Добро пожаловать!')
+  recipientId = ctx.message.text.split(' ')[1]
+})
+
+bot.command('ntf', (ctx) => {
+  axios.get(url, {
+    params: {
+      status: status
+    },
+    headers: {
+      'accept': '*/*',
+      'X-User-Identity': recipientId
+    }
+  })
+    .then(response => {
+      const data = response.data
+      const messages = data.notifications.map(notification => '***' + notification.message + '***').join('\n')
+      ctx.reply('Ваши непрочитанные уведомления: \n' + messages)
+    })
+    .catch(error => {
+      console.error(error);
+      ctx.reply('Произошла ошибка, сервис временно недоступен!.')
+    });
+});
 
 bot.help((ctx) => ctx.reply(commands))
 
@@ -17,17 +45,6 @@ bot.hears('кто я', (ctx) => {
     `Телегамм: @${ctx.message.from.username}`)
 })
 
-function getDif(date1, date2) {
-  let dif = date1.getTime() - date2.getTime()
-  return dif
-}
-
-bot.command('info', (ctx) => {
-  let info = JSON.stringify(data[0], null, 2)
-  bot.telegram.sendMessage(ctx.message.chat.id,
-    `${info}`)
-})
-
 bot.command('users', (ctx) => {
   users.then((e) => {
     console.log(e.rows)
@@ -36,40 +53,6 @@ bot.command('users', (ctx) => {
   }).catch((e) => {
     console.log(e.message)
   })
-})
-
-bot.command('task', (ctx) => {
-  let info = JSON.stringify(data[0]['task'], null, 2)
-  let task = info.split('"')
-  let date = new Date().toISOString().slice(0, 10)
-  let d1 = new Date()
-  let d2 = new Date("2021-01-01")
-
-
-  bot.telegram.sendMessage(ctx.message.chat.id,
-    `${info}\n` +
-    `Задача: ${task[3]}\n` +
-    `Сегодня ${(d1 - d2) / 1000 / 60 / 60 / 24}`)
-})
-
-bot.hears("sign", (ctx) => ctx.reply("Please send your contact by pressing your contact", {
-  reply_markup: {
-    keyboard: [
-      [
-        {
-          text: "📲 Send phone number",
-          request_contact: true,
-        },
-      ],
-    ],
-    one_time_keyboard: true,
-  },
-}))
-
-bot.on("contact", (ctx) => {
-  const contact = ctx.message.contact.phone_number;
-  console.log("Hello Contact", contact);
-  bot.hears("nomer", (ctx) => ctx.reply(contact));
 })
 
 bot.launch()
