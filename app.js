@@ -1,14 +1,31 @@
 const { Telegraf } = require('telegraf')
 require('dotenv').config()
 const commands = require('./const')
-const { selectPromise, insertRecord } = require('./pg')
+const { selectRecord, selectIdRecord, insertRecord } = require('./pg')
 const axios = require('axios');
+const cron = require('node-cron');
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
 const url = 'http://localhost:8083/schedule/notification'
 const status = 'UNREAD'
 let recipientId
+
+cron.schedule('*/30 * * * * *', async () => {
+    try {
+        const subscribedUsers = await selectRecord()
+        console.log(subscribedUsers)
+
+        for (const user of subscribedUsers) {
+            const { tg_id } = user;
+            const message = 'Уведомление'
+
+            await bot.telegram.sendMessage(tg_id, message)
+        }
+    } catch (error) {
+        console.error('Error in scheduled job:', error)
+    }
+});
 
 bot.start((ctx) => {
     ctx.reply('Добро пожаловать!')
@@ -22,7 +39,7 @@ bot.start((ctx) => {
             console.log('Inserted row:', result.rows)
         })
         .catch((error) => {
-            console.error('Insert error:', error);
+            console.error('Insertion error:', error)
         })
 })
 
@@ -57,14 +74,14 @@ bot.hears('кто я', (ctx) => {
 })
 
 bot.command('users', (ctx) => {
-    selectPromise.then((e) => {
-        console.log(e.rows)
-        const result = JSON.stringify(e.rows, null, 2)
-        bot.telegram.sendMessage(ctx.message.chat.id,
-            `${result}`)
-    }).catch((e) => {
-        console.log(e.message)
-    })
+    selectRecord()
+        .then((e) => {
+            const result = JSON.stringify(e, null, 2)
+            bot.telegram.sendMessage(ctx.message.chat.id,
+                `${result}`)
+        }).catch((e) => {
+            console.log(e.message)
+        })
 })
 
 bot.launch()

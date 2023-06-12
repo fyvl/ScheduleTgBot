@@ -10,11 +10,30 @@ const client = new Client({
 
 client.connect()
 
-let selectQuery = `SELECT * FROM "Users"`
-const selectPromise = client.query(selectQuery)
+const selectRecord = () => {
+    let selectQuery = `SELECT * FROM "Users"`
+
+    return client.query(selectQuery)
+        .then(result => result.rows)
+        .catch(error => {
+            throw new Error('Selection error: ' + error.message)
+        })
+}
+
+const selectIdRecord = () => {
+    let selectQuery = `SELECT tg_id FROM "Users"`
+
+    return client.query(selectQuery)
+        .then((result) => {
+            return result.rows.map((row) => row.tg_id);
+        })
+        .catch(error => {
+            throw new Error('Selection error: ' + error.message)
+        })
+}
 
 const insertRecord = (username, tgid, scheduleid) => {
-    const selectQuery = `SELECT * FROM "Users" WHERE username = '${username}'`;
+    const selectQuery = `SELECT * FROM "Users" WHERE username = '${username}'`
     const insertQuery = `INSERT INTO "Users" (username, tg_id, schedule_id) VALUES ('${username}', '${tgid}', '${scheduleid}') RETURNING *`
 
     return client.query(selectQuery)
@@ -26,11 +45,12 @@ const insertRecord = (username, tgid, scheduleid) => {
             }
         })
         .catch((error) => {
-            throw new Error('Insert error: ' + error.message);
+            throw new Error('Insertion error: ' + error.message)
         });
 }
 
 module.exports = {
-    selectPromise,
+    selectRecord,
+    selectIdRecord,
     insertRecord
 }
