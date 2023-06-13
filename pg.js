@@ -20,12 +20,12 @@ const selectRecord = () => {
         })
 }
 
-const selectIdRecord = () => {
-    let selectQuery = `SELECT tg_id FROM "Users"`
+const selectIdRecord = (username) => {
+    let selectQuery = `SELECT schedule_id FROM "Users" WHERE username = '${username}'`
 
     return client.query(selectQuery)
         .then((result) => {
-            return result.rows.map((row) => row.tg_id);
+            return result.rows.map((row) => row.schedule_id)[0]
         })
         .catch(error => {
             throw new Error('Selection error: ' + error.message)

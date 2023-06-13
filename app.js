@@ -11,7 +11,7 @@ const url = 'http://localhost:8083/schedule/notification'
 const status = 'UNREAD'
 let recipientId
 
-cron.schedule('*/30 * * * * *', async () => {
+cron.schedule('* * * * 1', async () => {
     try {
         const subscribedUsers = await selectRecord()
         console.log(subscribedUsers)
@@ -72,24 +72,35 @@ bot.start((ctx) => {
 })
 
 bot.command('ntf', (ctx) => {
-    axios.get(url, {
-        params: {
-            status: status
-        },
-        headers: {
-            'accept': '*/*',
-            'X-User-Identity': recipientId
-        }
-    })
-        .then(response => {
-            const data = response.data
-            const messages = data.notifications.map(notification => '***' + notification.message + '***').join('\n')
-            ctx.reply('Ваши непрочитанные уведомления: \n' + messages)
+    const username = ctx.message.from.username
+
+    selectIdRecord(username)
+        .then((result) => {
+            const id = result
+
+            axios.get(url, {
+                params: {
+                    status: status
+                },
+                headers: {
+                    'accept': '*/*',
+                    'X-User-Identity': id
+                }
+            })
+                .then(response => {
+                    const data = response.data
+                    if (data.notifications.length !== 0) {
+                        message = data.notifications.map(notification => '*** ' + notification.message + ' ***').join('\n')
+                    } else {
+                        message = '*** Пусто ***'
+                    }
+                    ctx.reply('Ваши непрочитанные уведомления: \n' + message)
+                })
+                .catch(error => {
+                    console.error(error);
+                    ctx.reply('Произошла ошибка, сервис временно недоступен!.')
+                })
         })
-        .catch(error => {
-            console.error(error);
-            ctx.reply('Произошла ошибка, сервис временно недоступен!.')
-        });
 });
 
 bot.help((ctx) => ctx.reply(commands))
