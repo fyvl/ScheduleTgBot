@@ -2,8 +2,8 @@ const { Telegraf } = require('telegraf')
 require('dotenv').config()
 const commands = require('./const')
 const { selectRecord, selectIdRecord, insertRecord } = require('./pg')
-const axios = require('axios');
-const cron = require('node-cron');
+const axios = require('axios')
+const cron = require('node-cron')
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
@@ -17,10 +17,34 @@ cron.schedule('*/30 * * * * *', async () => {
         console.log(subscribedUsers)
 
         for (const user of subscribedUsers) {
-            const { tg_id } = user;
-            const message = 'Уведомление'
+            const { tg_id } = user
+            const { schedule_id } = user
+            let message
 
-            await bot.telegram.sendMessage(tg_id, message)
+            await axios.get(url, {
+                params: {
+                    status: status
+                },
+                headers: {
+                    'accept': '*/*',
+                    'X-User-Identity': schedule_id
+                }
+            })
+                .then(response => {
+                    const data = response.data
+                    if (data.notifications.length !== 0) {
+                        message = data.notifications.map(notification => '*** ' + notification.message + ' ***').join('\n')
+                    } else {
+                        message = '*** Пусто ***'
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    ctx.reply('Произошла ошибка, сервис временно недоступен!.')
+                });
+
+            await bot.telegram.sendMessage(tg_id, 'Ваши непрочитанные уведомления: \n' + message)
+            console.log(message)
         }
     } catch (error) {
         console.error('Error in scheduled job:', error)
@@ -28,7 +52,7 @@ cron.schedule('*/30 * * * * *', async () => {
 });
 
 bot.start((ctx) => {
-    ctx.reply('Добро пожаловать!')
+    ctx.reply(`Добро пожаловать, ${ctx.message.from.first_name}!`)
     recipientId = ctx.message.text.split(' ')[1]
 
     const username = ctx.message.from.username
@@ -36,7 +60,11 @@ bot.start((ctx) => {
 
     insertRecord(username, tgId, recipientId)
         .then((result) => {
-            console.log('Inserted row:', result.rows)
+            if (result.rowCount == 0) {
+                console.log(`User already exists! @${result.rows.username}`)
+            } else {
+                console.log('Inserted row:', result.rows)
+            }
         })
         .catch((error) => {
             console.error('Insertion error:', error)
