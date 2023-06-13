@@ -3,7 +3,6 @@ require('dotenv').config()
 const commands = require('./const')
 const { selectRecord, selectIdRecord, insertRecord } = require('./pg')
 const axios = require('axios')
-const cron = require('node-cron')
 const { CronJob } = require('cron')
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
@@ -14,7 +13,7 @@ const status = 'UNREAD'
 let cronJob
 
 bot.start((ctx) => {
-    ctx.reply(`Добро пожаловать, ${ctx.message.from.first_name}!`)
+    ctx.reply(`Добро пожаловать, ${ctx.message.from.first_name}!\n Чтобы начать рассылку и/или выбрать ее интервал используйте команду /schedule !`)
     recipientId = ctx.message.text.split(' ')[1]
 
     const username = ctx.message.from.username
@@ -38,13 +37,13 @@ bot.command('schedule', (ctx) => {
         reply_markup: {
             inline_keyboard: [
                 [
-                    { text: 'Every minute', callback_data: '1' },
-                    { text: 'Every 5 minutes', callback_data: '5' },
-                    { text: 'Every 10 minutes', callback_data: '10' },
+                    { text: 'Каждую 1 минуту', callback_data: '1' },
+                    { text: 'Каждые 5 минут', callback_data: '5' },
+                    { text: 'Каждые 10 минут', callback_data: '10' },
                 ],
                 [
-                    { text: 'Every 30 minutes', callback_data: '30' },
-                    { text: 'Every hour', callback_data: '60' },
+                    { text: 'Каждые 30 минут', callback_data: '30' },
+                    { text: 'Каждый час', callback_data: '60' },
                 ],
             ],
         },
