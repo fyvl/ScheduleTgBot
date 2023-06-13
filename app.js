@@ -4,52 +4,14 @@ const commands = require('./const')
 const { selectRecord, selectIdRecord, insertRecord } = require('./pg')
 const axios = require('axios')
 const cron = require('node-cron')
+const { CronJob } = require('cron')
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
 const url = 'http://localhost:8083/schedule/notification'
 const status = 'UNREAD'
-let recipientId
 
-cron.schedule('* * * * 1', async () => {
-    try {
-        const subscribedUsers = await selectRecord()
-        console.log(subscribedUsers)
-
-        for (const user of subscribedUsers) {
-            const { tg_id } = user
-            const { schedule_id } = user
-            let message
-
-            await axios.get(url, {
-                params: {
-                    status: status
-                },
-                headers: {
-                    'accept': '*/*',
-                    'X-User-Identity': schedule_id
-                }
-            })
-                .then(response => {
-                    const data = response.data
-                    if (data.notifications.length !== 0) {
-                        message = data.notifications.map(notification => '*** ' + notification.message + ' ***').join('\n')
-                    } else {
-                        message = '*** Пусто ***'
-                    }
-                })
-                .catch(error => {
-                    console.error(error);
-                    ctx.reply('Произошла ошибка, сервис временно недоступен!.')
-                });
-
-            await bot.telegram.sendMessage(tg_id, 'Ваши непрочитанные уведомления: \n' + message)
-            console.log(message)
-        }
-    } catch (error) {
-        console.error('Error in scheduled job:', error)
-    }
-});
+let cronJob
 
 bot.start((ctx) => {
     ctx.reply(`Добро пожаловать, ${ctx.message.from.first_name}!`)
@@ -69,6 +31,75 @@ bot.start((ctx) => {
         .catch((error) => {
             console.error('Insertion error:', error)
         })
+})
+
+bot.command('schedule', (ctx) => {
+    ctx.reply('Пожалуйста выберите интервал входящих уведомлений:', {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: 'Every minute', callback_data: '1' },
+                    { text: 'Every 5 minutes', callback_data: '5' },
+                    { text: 'Every 10 minutes', callback_data: '10' },
+                ],
+                [
+                    { text: 'Every 30 minutes', callback_data: '30' },
+                    { text: 'Every hour', callback_data: '60' },
+                ],
+            ],
+        },
+    })
+})
+
+bot.action(/(\d+)/, async (ctx) => {
+    const interval = parseInt(ctx.match[1])
+
+    if (cronJob) {
+        cronJob.stop()
+    }
+
+    cronJob = new CronJob(`*/${interval} * * * *`, async () => {
+        try {
+            const subscribedUsers = await selectRecord()
+            console.log(subscribedUsers)
+
+            for (const user of subscribedUsers) {
+                const { tg_id } = user
+                const { schedule_id } = user
+                let message
+
+                await axios.get(url, {
+                    params: {
+                        status: status
+                    },
+                    headers: {
+                        'accept': '*/*',
+                        'X-User-Identity': schedule_id
+                    }
+                })
+                    .then(response => {
+                        const data = response.data
+                        if (data.notifications.length !== 0) {
+                            message = data.notifications.map(notification => '*** ' + notification.message + ' ***').join('\n')
+                        } else {
+                            message = '*** Пусто ***'
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error)
+                        ctx.reply('Произошла ошибка, сервис временно недоступен!.')
+                    })
+
+                await bot.telegram.sendMessage(tg_id, 'Ваши непрочитанные уведомления: \n' + message)
+                console.log(message)
+            }
+        } catch (error) {
+            console.error('Error in scheduled job:', error)
+        }
+    })
+
+    cronJob.start()
+    ctx.reply(`Запланирована рассылка уведомлений каждые ${interval} минут.`)
 })
 
 bot.command('ntf', (ctx) => {
@@ -97,11 +128,11 @@ bot.command('ntf', (ctx) => {
                     ctx.reply('Ваши непрочитанные уведомления: \n' + message)
                 })
                 .catch(error => {
-                    console.error(error);
+                    console.error(error)
                     ctx.reply('Произошла ошибка, сервис временно недоступен!.')
                 })
         })
-});
+})
 
 bot.help((ctx) => ctx.reply(commands))
 

@@ -46,7 +46,7 @@ const insertRecord = (username, tgid, scheduleid) => {
         })
         .catch((error) => {
             throw new Error('Insertion error: ' + error.message)
-        });
+        })
 }
 
 module.exports = {
